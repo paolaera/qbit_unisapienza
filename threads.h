@@ -30,4 +30,6 @@ typedef struct {
  */
 void matvec_mult_mt(Matrix *M, Complex *v, Complex *out, int num_threads);
 
+void pfor(int nitems, int nthreads, void (*body)(int, void *), void *ctx);
+
 #endif //QBIT_ERA_THREADS_H
