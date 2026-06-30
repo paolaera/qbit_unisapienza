@@ -4,40 +4,38 @@
 
 #ifndef QBIT_ERA_COMPLEX_H
 #define QBIT_ERA_COMPLEX_H
+
+
+/*
+ * Numero complesso usato nel parser (#init, #define)
+ */
 typedef struct {
-    double re;   // parte reale
-    double im;   // parte immaginaria
+    double re;
+    double im;
+} ComplexNumber;
+
+/*
+ * Numero complesso usato nel simulatore (matrici, vettori)
+ */
+typedef struct {
+    double re;
+    double im;
 } Complex;
 
-/*
- * Crea un numero complesso a + ib
- */
-Complex complex_new(double re, double im);
+/* Costruttore */
+static inline Complex complex_new(double re, double im) {
+    Complex c;
+    c.re = re;
+    c.im = im;
+    return c;
+}
 
-/*
- * Somma tra due numeri complessi
- */
+/* Operazioni */
 Complex complex_add(Complex a, Complex b);
-
-/*
- * Prodotto tra due numeri complessi
- * (ax - by) + i(ay + bx)
- */
 Complex complex_mul(Complex a, Complex b);
 
-/*
- * Modulo al quadrato |z|^2 = a^2 + b^2
- * Utile per la fase di misura
- */
-double complex_abs2(Complex a);
+/* Parsing stringhe tipo "1.0+2.0i", "3.5-0.2i", "2", "-i", "i" */
+Complex parse_complex(const char* s);
 
-/*
- * Parsing di un numero complesso nel formato:
- *   0.123+i0.456
- *   1.0
- *   -0.5-i0.2
- *   0+i1
- * La parte immaginaria può mancare.
- */
-Complex complex_parse(const char *s);
+double complex_abs2(Complex c);
 #endif //QBIT_ERA_COMPLEX_H

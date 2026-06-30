@@ -1,107 +1,113 @@
+#define _POSIX_C_SOURCE 200809L
 #include <stdio.h>
 #include <stdlib.h>
-#include <ctype.h>
 #include <string.h>
 #include "complex.h"
 
 /*
- * Crea un numero complesso a + ib
- */
-Complex complex_new(double re, double im) {
-    Complex z;
-    z.re = re;
-    z.im = im;
-    return z;
-}
-
-/*
- * Somma tra due numeri complessi
+ * Somma complessa
  */
 Complex complex_add(Complex a, Complex b) {
-    Complex r;
-    r.re = a.re + b.re;
-    r.im = a.im + b.im;
-    return r;
+    return complex_new(a.re + b.re, a.im + b.im);
 }
 
 /*
- * Prodotto tra due numeri complessi:
- * (ax - by) + i(ay + bx)
+ * Prodotto complesso
  */
 Complex complex_mul(Complex a, Complex b) {
-    Complex r;
-    r.re = a.re * b.re - a.im * b.im;
-    r.im = a.re * b.im + a.im * b.re;
-    return r;
-}
-
-/*
- * Modulo al quadrato |z|^2 = a^2 + b^2
- */
-double complex_abs2(Complex a) {
-    return a.re * a.re + a.im * a.im;
-}
-
-/*
- * Parsing di un numero complesso
- */
-Complex complex_parse(const char *s) {
-    double re = 0.0, im = 0.0;
-    char *plus = NULL;
-    char *minus = NULL;
-    char *i_ptr = NULL;
-
-    // Copia locale modificabile
-    char buf[128];
-    strncpy(buf, s, 127);
-    buf[127] = '\0';
-
-    // Rimuovi spazi
-    for (int i = 0; buf[i]; i++) {
-        if (isspace((unsigned char)buf[i])) {
-            memmove(&buf[i], &buf[i+1], strlen(buf) - i);
-            i--;
-        }
-    }
-
-    // Cerca la parte immaginaria
-    i_ptr = strchr(buf, 'i');
-
-    if (!i_ptr) {
-        // Solo parte reale
-        re = atof(buf);
-        return complex_new(re, 0.0);
-    }
-
-    // Se c'è 'i', separiamo le parti
-    *i_ptr = '\0'; // tronca prima della 'i'
-
-    // Cerca + o - dopo la parte reale
-    plus = strrchr(buf, '+');
-    minus = strrchr(buf, '-');
-
-    char *sep = NULL;
-
-    if (plus && plus != buf) sep = plus;
-    else if (minus && minus != buf) sep = minus;
-
-    if (!sep) {
-        // Caso tipo: "i0.5" oppure "-i0.2"
-        if (buf[0] == '\0') {
-            // "i0.5"
-            im = atof(i_ptr + 1);
-            return complex_new(0.0, im);
-        } else {
-            // "1.0i"
-            re = atof(buf);
-            return complex_new(re, 0.0);
-        }
-    }
-
-    // Separiamo reale e immaginaria
-    *sep = '\0';
-    re = atof(buf);
-    im = atof(sep);
-
+    double re = a.re * b.re - a.im * b.im;
+    double im = a.re * b.im + a.im * b.re;
     return complex_new(re, im);
 }
+
+/*
+ */
+double complex_abs2(Complex c) {
+    return c.re * c.re + c.im * c.im;
+}
+
+/*
+ * Parsing di stringhe complesse:
+ *
+ *  "3.2+1.0i"
+ *  "3.2-1.0i"
+ *  "5"
+ *  "i"
+ *  "-i"
+ *  "2+i"
+ *  "2-i"
+ */
+Complex parse_complex(const char* s) {
+    Complex c = {0.0, 0.0};
+
+    char *copy = strdup(s);
+    if (!copy) {
+        perror("Errore allocazione parse_complex");
+        return c;
+    }
+
+    /* Rimuove spazi */
+    char *p = copy;
+    while (*p == ' ' || *p == '\t') p++;
+
+    /* Caso: solo "i" o "-i" */
+    if (strcmp(p, "i") == 0) {
+        c.re = 0.0;
+        c.im = 1.0;
+        free(copy);
+        return c;
+    }
+    if (strcmp(p, "-i") == 0) {
+        c.re = 0.0;
+        c.im = -1.0;
+        free(copy);
+        return c;
+    }
+
+    /* Cerca la parte immaginaria */
+    char *i_ptr = strchr(p, 'i');
+
+    if (!i_ptr) {
+        /* Solo parte reale */
+        c.re = strtod(p, NULL);
+        c.im = 0.0;
+        free(copy);
+        return c;
+    }
+
+    /* Parte immaginaria presente */
+    *i_ptr = '\0';  /* tronca la 'i' */
+
+    /* Cerca + o - che separa reale e immaginaria */
+    char *plus  = strrchr(p, '+');
+    char *minus = strrchr(p, '-');
+
+    char *sep = plus;
+    if (!sep || (minus && minus > plus))
+        sep = minus;
+
+    if (!sep || sep == p) {
+        /* Formati tipo "i", "-i", "3i" */
+        c.re = 0.0;
+        c.im = strtod(p, NULL);
+        free(copy);
+        return c;
+    }
+
+    /* Separazione reale / immaginaria */
+    char real_buf[128];
+    char imag_buf[128];
+
+    size_t real_len = sep - p;
+    strncpy(real_buf, p, real_len);
+    real_buf[real_len] = '\0';
+
+    strcpy(imag_buf, sep);  /* include il segno */
+
+    c.re = strtod(real_buf, NULL);
+    c.im = strtod(imag_buf, NULL);
+
+    free(copy);
+    return c;
+}
+
